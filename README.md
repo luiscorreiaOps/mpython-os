@@ -1,0 +1,1 @@
+- - Um dia sera um sistema operacional - -
