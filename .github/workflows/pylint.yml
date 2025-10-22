@@ -7,11 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-<<<<<<< HEAD
-        python-version: ["3.8", "3.9", "3.10"]
-=======
         python-version: ["3.8", "3.9", "3.10" , "3.13" , "3.14"]
->>>>>>> 519fe56 (feat: Full syncio para ESP32 - - Interface web completa com terminal e gerenciador de arquivos)
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
@@ -22,10 +18,6 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install pylint
-<<<<<<< HEAD
-    - name: Analysing the code with pylint
-=======
     - name: Analise pylint
->>>>>>> 519fe56 (feat: Full syncio para ESP32 - - Interface web completa com terminal e gerenciador de arquivos)
       run: |
         pylint $(git ls-files '*.py')

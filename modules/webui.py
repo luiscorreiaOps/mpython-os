@@ -44,7 +44,7 @@ def process_web_command(command_str):
     reboot_flag = False
     try:
         if cmd == "help": 
-            output = "Comandos: ls [path], cat <file>, rm <file>, pwd, mkdir <dir>, rmdir <dir>, echo <text>,mem, reboot"
+            output = "Comandos: ls [path], cat <file>, rm <file>, pwd, mkdir <dir>, rmdir <dir>, echo <text>, mem, reboot"
         elif cmd == "pwd": 
             output = uos.getcwd()
         elif cmd == "ls":
