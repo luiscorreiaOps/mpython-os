@@ -1,6 +1,5 @@
-import machine, ubinascii, uos
+import machine, ubinascii, uos, time
 
-#LED config
 try:
     led = machine.Pin(2, machine.Pin.OUT)
     led.off()
@@ -15,8 +14,13 @@ def device_id():
         return "mp-esp32-unknown"
 
 DEVICE_ID = device_id()
-#uos.mount / vars 
 print("Booting", DEVICE_ID)
 
-import time
+try:
+    uos.stat('/deploy.lock')
+    print("Modo de deploy detectado. Pulando inicializacao.")
+except OSError:
+    print("Inicializacao normal...")
+    import main
+
 time.sleep(0.1)

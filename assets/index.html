@@ -1,12 +1,184 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
-  <head>
+<head>
     <meta charset="utf-8">
-    <title>MPython OS - ESP32</title>
-  </head>
-  <body>
-    <h1>Luis OS</h1>
-    <p>O dispositivo esta pronto e configurado o REPL esta ativo!</p>
-    <p><a href="/files">Arquivos</a></p>
-  </body>
+    <title>LuisOs</title>
+    <style>
+        body { font-family: monospace; background: #1e1e1e; color: #dcdcdc; display: flex; }
+        .panel { border: 1px solid #00ff00; padding: 10px; margin: 10px; flex-grow: 1; min-width: 45%; }
+        h1, h2 { color: #00ff00; border-bottom: 1px solid #00ff00; padding-bottom: 5px; }
+        ul { list-style: none; padding: 0; }
+        li { display: flex; justify-content: space-between; align-items: center; padding: 5px; }
+        li:hover { background-color: #333; }
+        button { background: #333; border: 1px solid #00ff00; color: #00ff00; padding: 5px 10px; cursor: pointer; margin-left: 5px;}
+        textarea { width: 98%; height: 300px; background: #111; color: #eee; border: 1px solid #00ff00; margin-top: 10px; }
+        input[type=text], input[type=password] { background: #111; color: #eee; border: 1px solid #00ff00; padding: 5px; width: calc(100% - 12px); margin-bottom: 5px;}
+        #terminal-output { height: 400px; background-color: #000; overflow-y: scroll; white-space: pre-wrap; padding: 10px; border: 1px solid #00ff00; margin-bottom: 5px; }
+        .prompt { color: #00ff00; }
+        .command-input { display: flex; }
+        #terminal-input { flex-grow: 1; border: none; background: #000; color: #dcdcdc; padding: 5px; }
+        #terminal-input:focus { outline: none; }
+    </style>
+</head>
+<body>
+    <div class="panel" id="main-panel">
+        <h1>Bem vindo!</h1>
+        <div id="file-manager">
+            <h2 id="file-manager-title">Gerenciador de Arquivos</h2>
+            <ul id="file-list"></ul>
+            <div style="margin-top: 10px;">
+                <input type="text" id="new-filename" placeholder="novo_arquivo.py">
+                <button onclick="editFile(document.getElementById('new-filename').value)">Criar/Editar</button>
+            </div>
+        </div>
+        <div id="editor" style="display:none;">
+            <h2 id="editor-filename"></h2>
+            <textarea id="file-content"></textarea><br>
+            <button onclick="saveFile()">Salvar</button>
+            <button onclick="closeEditor()">Fechar Editor</button>
+        </div>
+        
+        <div id="wifi-manager" style="margin-top: 20px;">
+            <h2>Configuração de Wi-Fi</h2>
+            <input type="text" id="wifi-ssid" placeholder="Nome da Rede (SSID)"><br>
+            <input type="password" id="wifi-password" placeholder="Senha"><br>
+            <button onclick="saveWifi()">Salvar e Reiniciar</button>
+        </div>
+    </div>
+    <div class="panel" id="terminal-panel">
+        <h2>Terminal Web</h2>
+        <div id="terminal-output"></div>
+        <div class="command-input">
+            <span class="prompt" id="terminal-prompt">luis-os> </span>
+            <input type="text" id="terminal-input" autofocus>
+        </div>
+    </div>
+    <script>
+        const fileList = document.getElementById('file-list');
+        const fileManagerTitle = document.getElementById('file-manager-title');
+        const editor = document.getElementById('editor');
+        const fileContent = document.getElementById('file-content');
+        const editorFilename = document.getElementById('editor-filename');
+        let currentEditingFile = '';
+        const termOutput = document.getElementById('terminal-output');
+        const termInput = document.getElementById('terminal-input');
+        const termPrompt = document.getElementById('terminal-prompt');
+
+        async function loadFiles() {
+            try {
+                const response = await fetch('/api/files');
+                const data = await response.json();
+                fileManagerTitle.textContent = `Gerenciador de Arquivos [${data.path}]`;
+                fileList.innerHTML = '';
+                data.files.forEach(file => {
+                    const li = document.createElement('li');
+                    li.textContent = file;
+                    const buttons = document.createElement('div');
+                    buttons.innerHTML = `<button onclick="editFile('${file}')">Editar</button><button onclick="deleteFile('${file}')">Deletar</button>`;
+                    li.appendChild(buttons);
+                    fileList.appendChild(li);
+                });
+            } catch(e) { console.error("Falha ao carregar arquivos:", e); }
+        }
+
+        async function editFile(filename) {
+            if (!filename) { alert('Nome do arquivo não pode ser vazio.'); return; }
+            try {
+                const response = await fetch(`/api/read?file=${filename}`);
+                let content = '';
+                if (response.ok) {
+                    const data = await response.json();
+                    content = data.content;
+                }
+                currentEditingFile = filename;
+                editorFilename.textContent = `Editando: ${filename}`;
+                fileContent.value = content;
+                editor.style.display = 'block';
+            } catch(e) { console.error("Falha ao ler arquivo:", e); }
+        }
+
+        async function deleteFile(filename) {
+            if (confirm(`Tem certeza que deseja deletar ${filename}?`)) {
+                await fetch(`/api/delete?file=${filename}`);
+                loadFiles();
+            }
+        }
+
+        async function saveFile() {
+            try {
+                const response = await fetch('/api/write', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: currentEditingFile, content: fileContent.value }) });
+                if (response.ok) {
+                    alert('Arquivo salvo!');
+                    closeEditor();
+                    loadFiles();
+                } else { alert('Erro ao salvar arquivo.'); }
+            } catch(e) { console.error("Falha ao salvar:", e); }
+        }
+
+        function closeEditor() {
+            editor.style.display = 'none';
+        }
+        
+        async function loadMotd() {
+            try {
+                const response = await fetch('/api/motd');
+                const data = await response.json();
+                const motdDiv = document.createElement('div');
+                motdDiv.innerText = data.motd;
+                termOutput.appendChild(motdDiv);
+            } catch(e) { console.error("Falha ao carregar MOTD:", e); termOutput.innerHTML += "<div>Falha ao carregar load inicial.</div>"; }
+        }
+
+        termInput.addEventListener('keydown', async (event) => {
+            if (event.key === 'Enter' && termInput.value.trim() !== '') {
+                const command = termInput.value;
+                termOutput.innerHTML += `<div><span class="prompt">${termPrompt.textContent}</span>${command}</div>`;
+                termInput.value = '';
+                try {
+                    const response = await fetch('/api/exec', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ command: command }) });
+                    if (response.ok) {
+                        const data = await response.json();
+                        const outputDiv = document.createElement('div');
+                        outputDiv.innerText = data.output;
+                        termOutput.appendChild(outputDiv);
+                    } else { termOutput.innerHTML += `<div>Erro na comunicação com o dispositivo.</div>`; }
+                } catch(e) { console.error("Falha ao executar comando:", e); }
+                termOutput.scrollTop = termOutput.scrollHeight;
+            }
+        });
+
+        async function saveWifi() {
+            const ssid = document.getElementById('wifi-ssid').value;
+            const password = document.getElementById('wifi-password').value;
+
+            if (!ssid) {
+                alert('O nome da rede (SSID) é obrigatorio.');
+                return;
+            }
+
+            const confirmation = confirm(
+                'ATENCAO:\n\n' +
+                'O dispositivo ira salvar a nova rede e reiniciar.\n' +
+                'Voce perdera a conexao com esta pagina e precisara encontrar o novo endereço IP do dispositivo na sua rede Wifi.\n\n' +
+                'Deseja continuar?'
+            );
+
+            if (confirmation) {
+                try {
+                    await fetch('/api/setwifi', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ssid: ssid, password: password })
+                    });
+                    alert('Configuração enviada. O dispositivo esta reiniciando...');
+                } catch (e) {
+                    alert('Erro ao enviar configuracao. Tente novamente.');
+                }
+            }
+        }
+
+        loadFiles();
+        loadMotd();
+    </script>
+</body>
 </html>

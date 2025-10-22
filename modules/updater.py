@@ -9,7 +9,7 @@ def apply_uploaded():
             with open("/app.py", "wb") as fout:
                 fout.write(data)
             uos.remove("/uploaded.bin")
-            sysctl.log("Updater: applied uploaded.bin -> /app.py")
+            sysctl.log("Updater: aplicado uploaded.bin -> /app.py")
             return True
     except Exception as e:
         sysctl.log("Updater error:", e)
