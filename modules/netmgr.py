@@ -55,8 +55,8 @@ async def start():
             if sta.isconnected():
                 ip_info = sta.ifconfig()
                 ip_address = ip_info[0]
-                sysctl.log(f"************ SUCESSO NA CONEXAO ************")
-                sysctl.log(f"IP: {ip_address}")
+                sysctl.log(f"************ SUCESSO NA CONEXAO **********")
+                sysctl.log(f"              IP: {ip_address}")
                 sysctl.log(f"******************************************")
                 
                 if ENABLE_DISCOVERY_BEACON:

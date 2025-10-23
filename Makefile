@@ -1,10 +1,11 @@
+#VALIDAR PORTA
 PORT ?= /dev/ttyUSB0
-FIRMWARE ?= firmware.bin
+FIRMWARE ?= firmware/firmware.bin
 
 PYFILES = boot.py main.py set_wifi.py reset.py \
           modules/init.py modules/sysctl.py modules/netmgr.py modules/webui.py \
           modules/serial_shell.py modules/updater.py \
-          assets/index.html
+          assets/index.html assets/app.js assets/style.css
 
 MPY_CROSS = mpy-cross
 
@@ -35,7 +36,7 @@ deploy:
 		}; \
 	done
 	@echo "Enviando config Wifi..."
-	@-mpremote connect $(PORT) run set_wifi.py 2>/dev/null || echo "Config wifi enviada (pode ter reiniciado)"
+	@-mpremote connect $(PORT) run set_wifi.py 2>/dev/null || echo "Config wifi enviada."
 	@echo "\nDEPLOY RAPIDO CONCLUIDO."
 
 deploy-full: flash-firmware

@@ -2,13 +2,11 @@ Um SO para ESP32
 
 Este projeto hobista transforma um ESP32 em um dispositivo IoT gerenciável via Wifi, com uma interface web que inclui gerenciador de arquivos e terminal shell serial interativo:
 
-
-![alt text](web-front.png)
+![alt text](images/web-front.png)
 
 ---
 
-![alt text](back-view.png)
-
+![alt text](images/back-view.png)
 ----------
 
 

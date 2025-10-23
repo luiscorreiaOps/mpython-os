@@ -1,5 +1,6 @@
-from modules import netmgr
 import uos
+import machine
+from modules import netmgr
 
 netmgr.save_wifi("SIID", "PSS")
 
@@ -9,5 +10,4 @@ try:
 except OSError:
     pass
 
-import machine
 machine.reset()
