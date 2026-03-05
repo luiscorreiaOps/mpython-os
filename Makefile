@@ -1,10 +1,10 @@
-#VALIDAR PORTA
+#VALIDA PORTA
 PORT ?= /dev/ttyUSB0
 FIRMWARE ?= firmware/firmware.bin
 
 PYFILES = boot.py main.py set_wifi.py reset.py \
-          modules/init.py modules/sysctl.py modules/netmgr.py modules/webui.py \
-          modules/serial_shell.py modules/updater.py \
+          modules/__init__.py modules/sysctl.py modules/netmgr.py modules/webui.py \
+          modules/serial_shell.py modules/updater.py modules/cmd_handler.py modules/cron.py \
           assets/index.html assets/app.js assets/style.css
 
 MPY_CROSS = mpy-cross

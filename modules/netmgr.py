@@ -12,14 +12,14 @@ BEACON_INTERVAL_S = 60
 async def send_discovery_beacon(ip_address):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    
+
     broadcast_address = ('255.255.255.255', DISCOVERY_PORT)
-    
+
     message = ujson.dumps({
         "name": "luisos-bemvindo",
         "ip": ip_address
     })
-    
+
     sysctl.log(f"Iniciando envio de beacons a cada {BEACON_INTERVAL_S} segundos.")
     while True:
         try:
@@ -30,7 +30,7 @@ async def send_discovery_beacon(ip_address):
 
 async def start():
     sysctl.log("netmgr: start")
-    
+
     sta = network.WLAN(network.STA_IF)
     if sta.active():
         sysctl.log("Resetando interface Wifi...")
@@ -44,12 +44,19 @@ async def start():
     except Exception:
         cfg = None
 
+    # Configura hostname first - ja deu pau sem
+    hostname = "luisos"
+    try:
+        network.hostname(hostname)
+    except Exception:
+        pass
+
     if cfg and cfg.get("ssid"):
         sysctl.log(f"Tentando conectar a rede: '{cfg.get('ssid')}'")
         sta.active(True)
         await asyncio.sleep_ms(200)
         sta.connect(cfg.get("ssid"), cfg.get("password") or "")
-        
+
         for i in range(10):
             sysctl.log(f"Aguardando conexao... ({i+1}/10)")
             if sta.isconnected():
@@ -57,8 +64,25 @@ async def start():
                 ip_address = ip_info[0]
                 sysctl.log(f"************ SUCESSO NA CONEXAO **********")
                 sysctl.log(f"              IP: {ip_address}")
+                sysctl.log(f"         HOSTNAME: {hostname}.local")
                 sysctl.log(f"******************************************")
-                
+
+                # mDNS
+                try:
+                    import mdns
+                    m = mdns.MDNS()
+                    m.start(hostname, "LuisOS Device")
+                    m.add_service("_http", "_tcp", 80)
+                    sysctl.log("mDNS iniciado.")
+                except Exception:
+                    # Alternativa network.mDNS
+                    try:
+                        mdns = network.mDNS()
+                        mdns.start(hostname, "LuisOS")
+                        sysctl.log("mDNS (network) iniciado.")
+                    except:
+                        sysctl.log("mDNS nao suportado nesta build.")
+
                 if ENABLE_DISCOVERY_BEACON:
                     asyncio.create_task(send_discovery_beacon(ip_address))
                 else:
@@ -66,10 +90,10 @@ async def start():
 
                 return
             await asyncio.sleep(1)
-        
+
         sysctl.log("!!!! FALHA NA CONEXAO WIFI !!!!")
         sta.active(False)
-    
+
     sysctl.log("Criando AP fallback...")
     ap = network.WLAN(network.AP_IF)
     ap.active(True)

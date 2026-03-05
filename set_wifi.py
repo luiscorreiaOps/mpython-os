@@ -2,7 +2,7 @@ import uos
 import machine
 from modules import netmgr
 
-netmgr.save_wifi("SIID", "PSS")
+netmgr.save_wifi("<NOMEUID>", "<PASSUUID>")
 
 try:
     uos.remove('/deploy.lock')

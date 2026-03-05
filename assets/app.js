@@ -1,361 +1,255 @@
-const fileList = document.getElementById('file-list');
-const fileManagerTitle = document.getElementById('file-manager-title');
-const currentPathElement = document.getElementById('current-path');
-const editor = document.getElementById('editor');
-const fileContent = document.getElementById('file-content');
-const editorFilename = document.getElementById('editor-filename');
-const termOutput = document.getElementById('terminal-output');
-const termInput = document.getElementById('terminal-input');
-const termPrompt = document.getElementById('terminal-prompt');
-const newFilenameInput = document.getElementById('new-filename');
-const wifiSsidInput = document.getElementById('wifi-ssid');
-const wifiPasswordInput = document.getElementById('wifi-password');
+var curPath = "";
+var curFile = "";
+var chartD = [];
+var monInt = null;
+var cmdHis = [];
+var hisIdx = -1;
 
-let currentEditingFile = '';
-let currentPath = '';
-let pathHistory = [''];
+for (var k = 0; k < 50; k++) { chartD.push(0); }
 
-function isFolder(name) {
-    return !name.includes('.') || name === 'assets' || name === 'modules';
+window.onload = function() {
+    setupEvents();
+    loadFiles("");
+    loadMotd();
+    loadCron();
+    loadWifiStatus();
+};
+
+function setupEvents() {
+    document.getElementById("btn-up").onclick = goUp;
+    document.getElementById("btn-upload-trigger").onclick = function() { document.getElementById("file-upload").click(); };
+    document.getElementById("file-upload").onchange = function() { uploadFile(this); };
+    document.getElementById("btn-create").onclick = createFile;
+    document.getElementById("btn-save").onclick = saveFile;
+    document.getElementById("btn-close").onclick = closeEditor;
+    document.getElementById("btn-cron-add").onclick = addCron;
+    document.getElementById("btn-monitor").onclick = toggleMon;
+    document.getElementById("btn-wifi-save").onclick = saveWifi;
+    document.getElementById("terminal-input").onkeydown = function(e) { 
+        if (e.key === "Enter") {
+            handleTerminal(this);
+        } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            if (cmdHis.length > 0) {
+                if (hisIdx === -1) hisIdx = cmdHis.length;
+                if (hisIdx > 0) { hisIdx--; this.value = cmdHis[hisIdx]; }
+            }
+        } else if (e.key === "ArrowDown") {
+            e.preventDefault();
+            if (hisIdx !== -1) {
+                if (hisIdx < cmdHis.length - 1) { hisIdx++; this.value = cmdHis[hisIdx]; }
+                else { hisIdx = -1; this.value = ""; }
+            }
+        }
+    };
 }
 
-async function loadFiles(path = '') {
-    try {
-        currentPath = path;
-        currentPathElement.textContent = path ? '/' + path : '/';
-        
-        const apiUrl = path ? '/api/files?path=' + encodeURIComponent(path) : '/api/files';
-        const response = await fetch(apiUrl);
-        
-        if (!response.ok) {
-            throw new Error('HTTP ' + response.status);
-        }
-        
-        const data = await response.json();
-        
-        fileManagerTitle.textContent = 'Gerenciador de Arquivos [' + data.path + ']';
-        fileList.innerHTML = '';
-        
-        if (data.files && data.files.length > 0) {
-            data.files.forEach(function(file) {
-                const li = document.createElement('li');
-                
-                if (isFolder(file)) {
-                    li.className = 'folder';
+function loadWifiStatus() {
+    fetch("/api/wifi/status").then(function(r) { return r.json(); }).then(function(d) {
+        var el = document.getElementById("wifi-status");
+        if (d.ssid) { el.textContent = d.mode + ": " + d.ssid; }
+        else { el.textContent = d.mode; }
+    }).catch(function() { document.getElementById("wifi-status").textContent = "Erro status."; });
+}
+
+function loadFiles(p) {
+    curPath = p || "";
+    var displayPath = curPath;
+    if (displayPath.indexOf("/") !== 0) { displayPath = "/" + displayPath; }
+    document.getElementById("current-path").textContent = displayPath;
+    var u = "/api/files" + (curPath ? "?path=" + encodeURIComponent(curPath) : "");
+    fetch(u).then(function(r) { return r.json(); }).then(function(d) {
+        var l = document.getElementById("file-list");
+        l.innerHTML = "";
+        if (d.files) {
+            for (var i = 0; i < d.files.length; i++) {
+                var f = d.files[i];
+                var isDir = f.indexOf(".") === -1 || f === "assets" || f === "modules";
+                var li = document.createElement("li");
+                li.className = "file-item";
+                var s = document.createElement("span");
+                s.textContent = f;
+                li.appendChild(s);
+                var div = document.createElement("div");
+                if (isDir) {
+                    var b = document.createElement("button"); b.textContent = "Abrir";
+                    b.onclick = (function(n) { return function() { enterFolder(n); }; })(f);
+                    div.appendChild(b);
                     
-                    const span = document.createElement('span');
-                    span.textContent = '📁 ' + file;
-
-                    const div = document.createElement('div');
-
-                    const openButton = document.createElement('button');
-                    openButton.textContent = 'Abrir';
-                    openButton.addEventListener('click', function() {
-                        enterFolder(file);
-                    });
-
-                    div.appendChild(openButton);
-
-                    li.appendChild(span);
-                    li.appendChild(div);
+                    var bd = document.createElement("button"); bd.textContent = "X";
+                    bd.style.background = "#111"; // Cinza escuro
+                    bd.style.marginLeft = "5px";
+                    bd.onclick = (function(n) { return function() { deleteFile(n); }; })(f);
+                    div.appendChild(bd);
                 } else {
-                    li.className = 'file';
-
-                    const span = document.createElement('span');
-                    span.textContent = '📄 ' + file;
-
-                    const div = document.createElement('div');
-
-                    const editButton = document.createElement('button');
-                    editButton.textContent = 'Editar';
-                    editButton.addEventListener('click', function() {
-                        editFile(file);
-                    });
-
-                    const deleteButton = document.createElement('button');
-                    deleteButton.textContent = 'Deletar';
-                    deleteButton.addEventListener('click', function() {
-                        deleteFile(file);
-                    });
-
-                    div.appendChild(editButton);
-                    div.appendChild(deleteButton);
-
-                    li.appendChild(span);
-                    li.appendChild(div);
+                    var be = document.createElement("button"); be.textContent = "Edit";
+                    be.onclick = (function(n) { return function() { editFile(n); }; })(f);
+                    div.appendChild(be);
+                    var bd = document.createElement("button"); bd.textContent = "X";
+                    bd.style.background = "#111"; // Cinza escuro
+                    bd.style.marginLeft = "5px";
+                    bd.onclick = (function(n) { return function() { deleteFile(n); }; })(f);
+                    div.appendChild(bd);
                 }
-                
-                fileList.appendChild(li);
-            });
-        } else {
-            fileList.innerHTML = '<li>Pasta vazia</li>';
+                li.appendChild(div);
+                l.appendChild(li);
+            }
         }
-    } catch(e) { 
-        console.error('Falha ao carregar arquivos:', e);
-        fileList.innerHTML = '<li class="error">Erro ao carregar: ' + e.message + '</li>';
-    }
+    });
 }
 
-function enterFolder(folderName) {
-    const newPath = currentPath ? currentPath + '/' + folderName : folderName;
-    pathHistory.push(newPath);
-    loadFiles(newPath);
-}
+function enterFolder(n) { curPath = curPath ? curPath + "/" + n : n; loadFiles(curPath); }
 
 function goUp() {
-    if (pathHistory.length > 1) {
-        pathHistory.pop();
-        const previousPath = pathHistory[pathHistory.length - 1];
-        loadFiles(previousPath);
-    } else {
-        loadFiles('');
-    }
+    if (!curPath) return;
+    var parts = curPath.split("/"); parts.pop();
+    loadFiles(parts.join("/"));
 }
 
-async function editFile(filename) {
-    if (!filename) { 
-        alert('Nome do arquivo não pode ser vazio.'); 
-        return; 
-    }
-    
-    const fullPath = currentPath ? currentPath + '/' + filename : filename;
-    
-    try {
-        const response = await fetch('/api/read?file=' + encodeURIComponent(fullPath));
-        if (!response.ok) {
-            if (response.status === 404) {
-                currentEditingFile = fullPath;
-                editorFilename.textContent = 'Editar: ' + fullPath;
-                fileContent.value = '';
-                editor.style.display = 'block';
-                document.getElementById('file-manager').style.display = 'none';
-                document.body.classList.add('input-active');
-                fileContent.focus();
-                return;
-            }
-            throw new Error('HTTP ' + response.status);
-        }
-        
-        const data = await response.json();
-        currentEditingFile = fullPath;
-        editorFilename.textContent = 'Editar: ' + fullPath;
-        fileContent.value = data.content || '';
-        editor.style.display = 'block';
-        document.getElementById('file-manager').style.display = 'none';
-        document.body.classList.add('input-active');
-        fileContent.focus();
-        
-    } catch(e) { 
-        console.error('Falha ao ler arquivo:', e);
-        alert('Erro ao ler arquivo: ' + e.message);
+function editFile(n) {
+    var p = curPath ? curPath + "/" + n : n;
+    fetch("/api/read?file=" + encodeURIComponent(p)).then(function(r) { return r.json(); }).then(function(d) {
+        curFile = p;
+        document.getElementById("editor-title").textContent = p;
+        document.getElementById("file-cont").value = d.content || "";
+        document.getElementById("editor").style.display = "block";
+        document.getElementById("file-manager").style.display = "none";
+    });
+}
+
+function saveFile() {
+    var c = document.getElementById("file-cont").value;
+    fetch("/api/write", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename: curFile, content: c })
+    }).then(function() { alert("Salvo"); closeEditor(); });
+}
+
+function closeEditor() {
+    document.getElementById("editor").style.display = "none";
+    document.getElementById("file-manager").style.display = "block";
+    loadFiles(curPath);
+}
+
+function deleteFile(n) {
+    if (confirm("Apagar?")) {
+        var p = curPath ? curPath + "/" + n : n;
+        fetch("/api/delete?file=" + encodeURIComponent(p)).then(function() { loadFiles(curPath); });
     }
 }
 
 function createFile() {
-    const filename = newFilenameInput.value;
-    if (!filename) {
-        alert('Nome do arquivo não pode ser vazio.');
-        newFilenameInput.focus();
-        return;
-    }
-    editFile(filename);
+    var n = document.getElementById("new-name").value;
+    if (n) editFile(n);
 }
 
-async function deleteFile(filename) {
-    const fullPath = currentPath ? currentPath + '/' + filename : filename;
-    
-    if (confirm('Tem certeza que deseja deletar ' + fullPath + '?')) {
-        try {
-            const response = await fetch('/api/delete?file=' + encodeURIComponent(fullPath));
-            
-            if (response.ok) {
-                loadFiles(currentPath);
-            } else {
-                alert('Erro ao deletar arquivo.');
-            }
-        } catch(e) {
-            console.error('Falha ao deletar:', e);
-            alert('Erro ao deletar: ' + e.message);
-        }
-    }
+function uploadFile(i) {
+    var f = i.files[0]; if (!f) return;
+    var p = curPath ? curPath + "/" + f.name : f.name;
+    var url = "/api/upload?file=" + encodeURIComponent(p);
+    fetch(url, { method: "POST", body: f }).then(function(r) {
+        if (r.ok) { alert("Upload OK"); loadFiles(curPath); }
+        else { alert("Erro upload"); }
+    }).catch(function(e) { alert("Erro: " + e.message); });
 }
 
-async function saveFile() {
-    try {
-        const response = await fetch('/api/write', { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify({ 
-                filename: currentEditingFile, 
-                content: fileContent.value 
-            }) 
-        });
-        
-        if (response.ok) {
-            alert('Arquivo salvo!');
-            closeEditor();
-            loadFiles(currentPath);
-        } else { 
-            alert('Erro ao salvar arquivo.'); 
-        }
-    } catch(e) { 
-        console.error('Falha ao salvar:', e);
-        alert('Erro ao salvar: ' + e.message);
-    }
-}
-
-function closeEditor() {
-    editor.style.display = 'none';
-    newFilenameInput.value = '';
-    document.getElementById('file-manager').style.display = 'block';
-    document.body.classList.remove('input-active');
-    
-    setTimeout(function() {
-        termInput.focus();
-    }, 100);
-}
-
-async function loadMotd() {
-    try {
-        const response = await fetch('/api/motd');
-        if (response.ok) {
-            const data = await response.json();
-            const motdDiv = document.createElement('div');
-            motdDiv.innerHTML = data.motd.replace(/\n/g, '<br>');
-            termOutput.appendChild(motdDiv);
-        }
-    } catch(e) { 
-        console.error('Falha ao carregar MOTD:', e); 
-        termOutput.innerHTML += '<div>Falha ao carregar mensagem inicial.</div>'; 
-    }
-    
-    setTimeout(function() {
-        termInput.focus();
-    }, 500);
-}
-
-termInput.addEventListener('keydown', async function(event) {
-    if (event.key === 'Enter' && termInput.value.trim() !== '') {
-        const command = termInput.value;
-        
-        const commandDiv = document.createElement('div');
-        commandDiv.innerHTML = '<span class="prompt">' + termPrompt.textContent + '</span>' + command;
-        termOutput.appendChild(commandDiv);
-        
-        termInput.value = '';
-        
-        try {
-            const response = await fetch('/api/exec', { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ command: command }) 
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                const outputDiv = document.createElement('div');
-                outputDiv.textContent = data.output;
-                termOutput.appendChild(outputDiv);
-            } else { 
-                const errorDiv = document.createElement('div');
-                errorDiv.textContent = 'Erro na comunicacao com o dispositivo.';
-                errorDiv.style.color = 'red';
-                termOutput.appendChild(errorDiv);
-            }
-        } catch(e) { 
-            console.error('Falha ao executar comando:', e);
-            const errorDiv = document.createElement('div');
-            errorDiv.textContent = 'Erro: ' + e.message;
-            errorDiv.style.color = 'red';
-            termOutput.appendChild(errorDiv);
-        }
-        
-        termOutput.scrollTop = termOutput.scrollHeight;
-        termInput.focus();
-    }
-});
-
-function setupInputFocus(inputElement) {
-    inputElement.addEventListener('focus', function() {
-        document.body.classList.add('input-active');
-    });
-
-    inputElement.addEventListener('blur', function() {
-        setTimeout(function() {
-            const focusedElement = document.activeElement;
-            const isAnotherInput = focusedElement === newFilenameInput || 
-                                  focusedElement === wifiSsidInput || 
-                                  focusedElement === wifiPasswordInput || 
-                                  focusedElement === fileContent;
-            
-            if (!isAnotherInput) {
-                document.body.classList.remove('input-active');
-            }
-        }, 10);
+function loadMotd() {
+    fetch("/api/motd").then(function(r) { return r.json(); }).then(function(d) {
+        var o = document.getElementById("terminal-output");
+        var div = document.createElement("div");
+        div.innerHTML = d.motd.replace(/\n/g, "<br>");
+        o.appendChild(div);
+        o.scrollTop = o.scrollHeight;
     });
 }
 
-setupInputFocus(newFilenameInput);
-setupInputFocus(wifiSsidInput);
-setupInputFocus(wifiPasswordInput);
-setupInputFocus(fileContent);
-
-document.addEventListener('click', function(event) {
-    const clickedElement = event.target;
-    const isInput = clickedElement.tagName === 'INPUT' || 
-                   clickedElement.tagName === 'TEXTAREA';
-    
-    if (!isInput && !(editor.style.display === 'block')) {
-        document.body.classList.remove('input-active');
-        termInput.focus();
-    }
-});
-
-newFilenameInput.addEventListener('click', function(event) {
-    event.stopPropagation();
-    newFilenameInput.focus();
-});
-
-wifiSsidInput.addEventListener('click', function(event) {
-    event.stopPropagation();
-    wifiSsidInput.focus();
-});
-
-wifiPasswordInput.addEventListener('click', function(event) {
-    event.stopPropagation();
-    wifiPasswordInput.focus();
-});
-
-async function saveWifi() {
-    const ssid = wifiSsidInput.value;
-    const password = wifiPasswordInput.value;
-
-    if (!ssid) {
-        alert('O nome da rede (SSID) e obrigatorio.');
-        wifiSsidInput.focus();
-        return;
-    }
-
-    const confirmation = confirm(
-        'ATENÇÃO:\n\n' +
-        'O dispositivo ira salvar a nova rede e reiniciar.\n' +
-        'Voce perdera a conexão com esta página e precisara encontrar o novo endereço IP do dispositivo na sua rede Wifi.\n\n' +
-        'Deseja continuar?'
-    );
-
-    if (confirmation) {
-        try {
-            await fetch('/api/setwifi', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ssid: ssid, password: password })
-            });
-            alert('Configuracao enviada. O dispositivo esta reiniciando...');
-        } catch (e) {
-            alert('Erro ao enviar configuracao. Tente novamente.');
-        }
-    }
+function logTerm(m) {
+    var o = document.getElementById("terminal-output");
+    var d = document.createElement("div");
+    d.innerHTML = m.replace(/\n/g, "<br>");
+    o.appendChild(d);
+    o.scrollTop = o.scrollHeight;
 }
 
-loadFiles('');
-loadMotd();
+function handleTerminal(inp) {
+    var c = inp.value; if (!c) return;
+    cmdHis.push(c); if (cmdHis.length > 50) cmdHis.shift();
+    hisIdx = -1; inp.value = "";
+    if (c === "clear") { document.getElementById("terminal-output").innerHTML = ""; loadMotd(); return; }
+    logTerm("<span style='color:#0f0'>/> " + c + "</span>");
+    fetch("/api/exec", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ command: c })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+        logTerm(d.output);
+        if (c.indexOf("cd ") === 0) loadFiles(curPath);
+    }).catch(function(e) { logTerm("Erro: " + e.message); });
+}
+
+function toggleMon() {
+    var b = document.getElementById("btn-monitor");
+    if (monInt) { clearInterval(monInt); monInt = null; b.textContent = "Iniciar"; }
+    else { monInt = setInterval(updateChart, 1000); b.textContent = "Parar"; }
+}
+
+function updateChart() {
+    var p = document.getElementById("adc-pin-select").value;
+    fetch("/api/gpio/" + p).then(function(r) { return r.json(); }).then(function(d) {
+        var v = d.analog || 0;
+        document.getElementById("sensor-val").textContent = v;
+        chartD.push(v); chartD.shift(); drawChart();
+    });
+}
+
+function drawChart() {
+    var c = document.getElementById("sensorChart"); if (!c) return;
+    var ctx = c.getContext("2d");
+    ctx.clearRect(0, 0, c.width, c.height);
+    ctx.strokeStyle = "#0f0"; ctx.beginPath();
+    var s = c.width / 49;
+    for (var i = 0; i < 50; i++) {
+        var y = c.height - (chartD[i] / 4095 * c.height);
+        if (i === 0) ctx.moveTo(0, y); else ctx.lineTo(i * s, y);
+    }
+    ctx.stroke();
+}
+
+function loadCron() {
+    fetch("/api/cron/list").then(function(r) { return r.json(); }).then(function(d) {
+        var b = document.getElementById("cron-tbody"); b.innerHTML = "";
+        if (d.tasks) {
+            for (var i = 0; i < d.tasks.length; i++) {
+                var t = d.tasks[i];
+                var tr = document.createElement("tr");
+                tr.innerHTML = "<td>" + t.interval + "s</td><td>" + t.command + "</td>";
+                var td = document.createElement("td");
+                var btn = document.createElement("button"); btn.textContent = "X"; btn.className = "btn-red";
+                btn.onclick = (function(id) { return function() { fetch("/api/cron/delete?id=" + id).then(loadCron); }; })(t.id);
+                td.appendChild(btn); tr.appendChild(td); b.appendChild(tr);
+            }
+        }
+    });
+}
+
+function addCron() {
+    var i = document.getElementById("cron-int").value;
+    var c = document.getElementById("cron-cmd").value;
+    if (!i || !c) return;
+    fetch("/api/cron/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ interval: parseInt(i), command: c })
+    }).then(loadCron);
+}
+
+function saveWifi() {
+    var s = document.getElementById("wifi-ssid").value;
+    var p = document.getElementById("wifi-pass").value;
+    fetch("/api/setwifi", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ssid: s, password: p })
+    }).then(function() { alert("OK! Reiniciando..."); });
+}

@@ -1,18 +1,18 @@
-body { font-family: monospace; background: #1e1e1e; color: #dcdcdc; display: flex; }
-.panel { border: 1px solid #00ff00; padding: 10px; margin: 10px; flex-grow: 1; min-width: 45%; }
-h1, h2 { color: #00ff00; border-bottom: 1px solid #00ff00; padding-bottom: 5px; }
-ul { list-style: none; padding: 0; }
-li { display: flex; justify-content: space-between; align-items: center; padding: 5px; }
-li:hover { background-color: #333; }
-button { background: #333; border: 1px solid #00ff00; color: #00ff00; padding: 5px 10px; cursor: pointer; margin-left: 5px;}
-textarea { width: 98%; height: 300px; background: #111; color: #eee; border: 1px solid #00ff00; margin-top: 10px; }
-input[type=text], input[type=password] { background: #111; color: #eee; border: 1px solid #00ff00; padding: 5px; width: calc(100% - 12px); margin-bottom: 5px;}
-#terminal-output { height: 400px; background-color: #000; overflow-y: scroll; white-space: pre-wrap; padding: 10px; border: 1px solid #00ff00; margin-bottom: 5px; }
-.prompt { color: #00ff00; }
-.command-input { display: flex; }
-#terminal-input { flex-grow: 1; border: none; background: #000; color: #dcdcdc; padding: 5px; }
-#terminal-input:focus { outline: none; }
-.folder { color: #ffff00; }
-.file { color: #dcdcdc; }
-.error { color: #ff4444; }
-.input-active #terminal-input { background: #333; color: #666; }
+body { font-family: monospace; background: #1e1e1e; color: #ccc; margin: 0; padding: 20px; }
+.main-container { display: flex; gap: 20px; flex-wrap: wrap; }
+.left-col { flex: 1; min-width: 350px; }
+.right-col { flex: 1; min-width: 350px; display: flex; flex-direction: column; gap: 20px; }
+.panel { border: 1px solid #0f0; background: #1a1a1a; padding: 15px; margin-bottom: 20px; }
+h1, h2 { color: #0f0; border-bottom: 1px solid #333; margin-top: 0; padding-bottom: 5px; }
+button { background: #222; border: 1px solid #0f0; color: #0f0; padding: 5px 10px; cursor: pointer; margin-left: 5px; }
+button:hover { background: #333; }
+input, textarea, select { background: #000; color: #fff; border: 1px solid #333; padding: 5px; }
+#file-list { list-style: none; padding: 0; }
+.file-item { display: flex; justify-content: space-between; align-items: center; padding: 5px; border-bottom: 1px solid #222; }
+.btn-red { background: #c0392b !important; color: #fff !important; border: 1px solid #000 !important; }
+#terminal-output { height: 300px; background: #000; border: 1px solid #0f0; overflow-y: auto; padding: 10px; font-family: monospace; white-space: pre-wrap; }
+.cmd-box { display: flex; background: #000; border: 1px solid #0f0; border-top: none; padding: 5px; }
+#terminal-input { flex: 1; border: none; outline: none; background: transparent; color: #fff; }
+canvas { width: 100%; height: 150px; background: #000; border: 1px solid #222; }
+.editor-footer { margin-top: 10px; display: flex; justify-content: space-between; }
+#close-edit { background: #222; border: 1px solid #444; color: #888; }

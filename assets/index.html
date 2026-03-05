@@ -2,44 +2,87 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>LuisOs</title>
+    <title>LuisOS v0.3</title>
     <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body>
-    <div class="panel" id="main-panel">
-        <h1>Bem vindo!</h1>
-        <div id="file-manager">
-            <h2 id="file-manager-title">Gerenciador de Arquivos</h2>
-            <div style="margin-bottom: 10px;">
-                <button onclick="goUp()">Voltar</button>
-                <span id="current-path" style="margin-left: 10px;">/</span>
+    <div class="main-container">
+        <!ESQUERDA>
+        <div class="left-col">
+            <div class="panel">
+                <h1>Bem-vindo!</h1>
+
+                <div id="file-manager">
+                    <h2>Gerenciador de Arquivos</h2>
+                    <div class="controls">
+                        <button id="btn-up">Voltar</button>
+                        <span id="current-path">/</span>
+                        <button id="btn-upload-trigger" style="float:right">Upload</button>
+                        <input type="file" id="file-upload" style="display:none">
+                    </div>
+                    <ul id="file-list"></ul>
+                    <div class="controls">
+                        <input type="text" id="new-name" placeholder="novo_arquivo.py">
+                        <button id="btn-create">Criar</button>
+                    </div>
+                </div>
+
+                <div id="editor" style="display:none">
+                    <h2 id="editor-title">Editor</h2>
+                    <textarea id="file-cont" rows="15" style="width:100%; background:#000; color:#fff; border:1px solid #0f0;"></textarea>
+                    <div class="controls">
+                        <button id="btn-save">Salvar</button>
+                        <button id="btn-close">Fechar (X)</button>
+                    </div>
+                </div>
             </div>
-            <ul id="file-list"></ul>
-            <div style="margin-top: 10px;">
-                <input type="text" id="new-filename" placeholder="novo_arquivo.py">
-                <button onclick="createFile()">Criar/Editar</button>
+
+            <div class="panel">
+                <h2>Agendador de Tarefas (Cron)</h2>
+                <table><tbody id="cron-tbody"></tbody></table>
+                <div class="controls">
+                    <input type="number" id="cron-int" placeholder="Seg" style="width:50px">
+                    <input type="text" id="cron-cmd" placeholder="comando" style="flex:1">
+                    <button id="btn-cron-add">Add</button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>Configuração Wi-Fi</h2>
+                <div id="wifi-status" style="margin-bottom: 10px; color: #0f0; font-size: 0.9em;">Carregando status...</div>
+                <input type="text" id="wifi-ssid" placeholder="SSID"><br>
+                <input type="password" id="wifi-pass" placeholder="Senha"><br>
+                <button id="btn-wifi-save">Salvar e Reiniciar</button>
             </div>
         </div>
-        <div id="editor" style="display:none;">
-            <h2 id="editor-filename"></h2>
-            <textarea id="file-content"></textarea><br>
-            <button onclick="saveFile()">Salvar</button>
-            <button onclick="closeEditor()">Fechar Editor</button>
-        </div>
-        
-        <div id="wifi-manager" style="margin-top: 20px;">
-            <h2>Configuração de Wi-Fi</h2>
-            <input type="text" id="wifi-ssid" placeholder="Nome da Rede (SSID)"><br>
-            <input type="password" id="wifi-password" placeholder="Senha"><br>
-            <button onclick="saveWifi()">Salvar e Reiniciar</button>
-        </div>
-    </div>
-    <div class="panel" id="terminal-panel">
-        <h2>Terminal Web</h2>
-        <div id="terminal-output"></div>
-        <div class="command-input">
-            <span class="prompt" id="terminal-prompt">luis-os> </span>
-            <input type="text" id="terminal-input" autofocus>
+
+        <!--DIREITA-->
+        <div class="right-col">
+            <!-- TOPO-->
+            <div class="panel">
+                <h2>Terminal Web</h2>
+                <div id="terminal-output"></div>
+                <div class="cmd-box">
+                    <span>luis-os></span>
+                    <input type="text" id="terminal-input" autofocus>
+                </div>
+            </div>
+
+            <!-- DBAIXO-->
+            <div class="panel">
+                <h2>Dashboard de Sensores</h2>
+                <div class="controls">
+                    <select id="adc-pin-select">
+                        <option value="34">GPIO 34</option>
+                        <option value="35">GPIO 35</option>
+                        <option value="32">GPIO 32</option>
+                        <option value="33">GPIO 33</option>
+                    </select>
+                    <button id="btn-monitor">Iniciar</button>
+                    <span id="sensor-val" style="float:right; color:#0f0; font-size:1.2em;">0</span>
+                </div>
+                <canvas id="sensorChart" width="400" height="150"></canvas>
+            </div>
         </div>
     </div>
     <script src="/assets/app.js"></script>

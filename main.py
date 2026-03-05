@@ -1,5 +1,5 @@
 import uasyncio as asyncio
-from modules import init, sysctl, netmgr, webui, serial_shell
+from modules import sysctl, netmgr, webui, serial_shell, cron
 
 async def start_services():
     print("Inicializando subsistemas...")
@@ -9,6 +9,7 @@ async def start_services():
 
     asyncio.create_task(webui.run())
     asyncio.create_task(serial_shell.run())
+    asyncio.create_task(cron.start())
     print("Serviços iniciados.")
 
 def main():
